@@ -1,0 +1,31 @@
+0.1.3 (17-09-2008)
+====
+* Broadcast requests were submitted as User requests.. Fixed !
+* Bumped protocol version to latest (1.2.1)
+* Moved constants.ml to lastfm_constants.ml to avoid poluting the
+  namespace.
+
+0.1.2 (16-04-2008)
+=====
+* Install .cmx file
+
+0.1.1 (19-12-2007)
+=====
+* Changed API:
+ - Simply create a song record with get_song
+ - Test wether your song record is valid for each submission
+   type
+ - submit and do_submit now return a list of songs that
+   couldn't be submited, along with the explanation
+ - get, do_np and do_submit now give another try when failed
+   authentification can be due to caching inconsistency
+ - anonymous get requests are somehow better handled when caching.
+   However, you should not use get for multiple simultaneous anonymous
+   streaming.
+ + Better Radio protocol reversing, removed no longer available 
+   playlist url.
+ + Close http connection when error is raised by underlying modul
+
+0.1.0 (01-11-2007)
+=====
+* Initial release

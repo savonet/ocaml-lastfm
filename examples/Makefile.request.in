@@ -1,0 +1,8 @@
+SOURCES = request.ml
+RESULT = request
+INCDIRS = ../src @ALL_INC@
+LIBS = @all_requires@ lastfm
+
+all: nc
+
+-include OCamlMakefile
