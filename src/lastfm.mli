@@ -60,6 +60,12 @@ sig
   (** Get meaning of Error e *)
   val string_of_error : error -> string
 
+  (** Base port. Default: 80 *)
+  val base_port : int ref
+
+  (** Base host. Default: "post.audioscrobbler.com" *)
+  val base_host : string ref
+
   (** {2 Common API}
 
      Functions common to both basic and advanced APIs *)
@@ -170,6 +176,9 @@ sig
   (** Get meaning of Error e *)
   val string_of_error : error -> string
 
+  (** Base host. Default: "ext.last.fm" *)
+  val base_host : string ref 
+
   (** {2 Basic API} *)
   
   (** [get uri] performs whole process and
@@ -210,13 +219,13 @@ sig
 
   (** [parse uri] parse the given lastfm:// uri
     *
-    * returns login option,station,options *)
-  val parse : string -> (login option)*string*(string option)
+    * returns login,station,options *)
+  val parse : string -> login*string*(string option)
   
   (** [init login] initiate lastfm session
     *
     * Returns the session id *)
-  val init : login option -> string
+  val init : login -> string
   
   (** [adjust id station] adjusts lastfm station 
     * for given session ID 

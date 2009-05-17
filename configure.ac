@@ -1,6 +1,6 @@
 
 # check for one particular file of the sources 
-AC_INIT(ocaml-lastfm, 0.1.3, savonet-users@lists.sourceforge.net)
+AC_INIT(ocaml-lastfm, 0.2.0, savonet-users@lists.sourceforge.net)
 
 VERSION=$PACKAGE_VERSION
 AC_SUBST(VERSION)
@@ -99,15 +99,6 @@ AC_MSG_CHECKING(for ocaml-pcre)
    else
    INC="$INC `$OCAMLFIND query pcre`"
    requires="$requires pcre"
-   AC_MSG_RESULT(ok)
-fi
-
-AC_MSG_CHECKING(for ocaml xml-light)
-   if ! $OCAMLFIND query xml-light > /dev/null 2>&1 ; then
-       AC_MSG_ERROR(Not found.)
-   else
-   INC="$INC `$OCAMLFIND query xml-light`"
-   requires="$requires xml-light"
    AC_MSG_RESULT(ok)
 fi
 

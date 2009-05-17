@@ -128,8 +128,8 @@ module Audioscrobbler=
 
     (* Protocol constants *)
     let version = "1.2.1"
-    let base_port = 80
-    let base_host = "post.audioscrobbler.com"
+    let base_port = ref 80
+    let base_host = ref "post.audioscrobbler.com"
     let handshake_req = Printf.sprintf "/?hs=true&p=%s&c=%s&v=%s&u=%s&t=%s&a=%s" version
     (* sessions contains (user,pass) => id *)
     let sessions = Hashtbl.create 1
@@ -172,7 +172,7 @@ module Audioscrobbler=
            let pass_digest = Digest.string pass in
            let token = Digest.string((Digest.to_hex pass_digest) ^ timestamp) in
            let req = handshake_req client version user timestamp (Digest.to_hex token) in
-           let ans = request ~host:base_host ~port:base_port req in
+           let ans = request ~host:!base_host ~port:!base_port req in
            let state,id,v = 
              try
                let lines = Pcre.split ~pat:"[\r\n]+" ans in
@@ -341,7 +341,7 @@ module Radio=
      * and an uri *)
     type track = (string * string) list * string
 
-    type session = { login : login option; station : ((string*string) list*string) option;
+    type session = { login : login; station : ((string*string) list*string) option;
                      base_url : string; playlist_url : string option; 
                      base_path: string }
 
@@ -363,11 +363,8 @@ module Radio=
     let request ~host = try request ~host:host with e -> raise (Http (Printexc.to_string e))
 
     (* Some constant for the protocol *)
-    let base_host = "ext.last.fm"
+    let base_host = ref "ext.last.fm"
     let sessions = Hashtbl.create 10
-    let anon_req = "/1.0/webclient/xmlrpc.php"
-    let anon_post = "<methodCall><methodName>getSession</methodName><params /></methodCall>"
-    let anon_handshake = Printf.sprintf "/1.0/radio/webclient/handshake.php?sessionKey=%s&user=%s"
     let registered_handshake = Printf.sprintf "/radio/handshake.php?username=%s&passwordmd5=%s"
     let station_set base id url = Printf.sprintf "%s/adjust.php?session=%s&url=%s" base id url
 
@@ -447,83 +444,40 @@ module Radio=
           let user,password = Pcre.get_substring sub 1,
                               Pcre.get_substring sub 2
           in
-          (Some { user = user ; password = password }),
+          { user = user ; password = password },
                  Printf.sprintf "lastfm://%s" station,options
         with
-          | Not_found -> let station,options = 
-                           opt_parse uri 
-                         in
-                         None,
-                         station,
-                         options
-    
-    let anon_parse s = 
-       try
-         let content = Xml.parse_string s in
-         let rec get_auth content = 
-           match content with
-             | Xml.Element("data",_,
-                   [Xml.Element("value",_,[Xml.Element("string",_,[Xml.PCData x])]);
-            	Xml.Element("value",_,[Xml.Element("string",_,[Xml.PCData y])])]) :: l
-    	          -> x,y
-             | Xml.Element(_,_,l) :: l' -> get_auth (l@l')
-    	 | _ -> raise (Auth s)
-        in
-        get_auth [content]
-       with
-         | _ -> raise (Auth s)
-    
+          | Not_found -> raise (Auth "Could not find login/password.") 
+   
     (* Core stuff.. *)
     
     let clear id =
         Hashtbl.remove sessions id
     
-    let anon_session () = 
-      let headers = [("Content-Type","text/xml")] in
-      let ret = request ~host:base_host ~post:anon_post ~headers:headers anon_req in
-      anon_parse ret
-    
     let init login = 
-      match login with
-        | None -> let user,id = anon_session () in
-                  let ret = request ~host:base_host 
-                      (anon_handshake id (Netencoding.Url.encode user)) 
-                  in
-                  let id,playlist_url,
-                      base_url,base_path = 
-                      parse_handshake ret 
-                  in
-		  Hashtbl.replace sessions id {playlist_url=playlist_url;
-                                               base_url=base_url;
-                                               base_path=base_path;
-                                               login=None;
-                                               station=None} ;
-		  id
-       | Some login -> 
-          try
-            Hashtbl.iter (fun x d -> 
-	                     if d.login = Some login then _raise (Internal x))
-			 sessions ;
-	    _raise Not_found
-          with
-            | Not_found -> 
-	            let user,password = login.user,login.password in
-                    let password = Digest.to_hex (Digest.string password) in
-                    let ret = request ~host:base_host (registered_handshake 
-    	                      (Netencoding.Url.encode user) password)
-                    in
-                    let id,playlist_url,
-                        base_url,base_path = 
-                        parse_handshake ret 
-                    in
-		    Hashtbl.replace sessions id {playlist_url=playlist_url;
+     try
+      Hashtbl.iter (fun x d -> 
+	              if d.login = login then _raise (Internal x))
+                       sessions ;
+      _raise Not_found
+     with
+       | Not_found -> 
+           let user,password = login.user,login.password in
+           let password = Digest.to_hex (Digest.string password) in
+           let ret = request ~host:!base_host (registered_handshake 
+             (Netencoding.Url.encode user) password)
+           in
+           let id,playlist_url,
+             base_url,base_path = 
+               parse_handshake ret 
+           in
+           Hashtbl.replace sessions id {playlist_url=playlist_url;
                                                  base_url=base_url;
                                                  base_path=base_path;
-                                                 login=Some login;
+                                                 login=login;
                                                  station=None} ;
-		    id
-	   | Internal x -> x
-      
+           id
+       | Internal x -> x
     
     let adjust id req = 
       let d = 
@@ -564,35 +518,11 @@ module Radio=
     
     let get uri = 
       let login,station,options = parse uri in
-      let id = 
-        match login with
-	  | None -> 
-	    (* Check if another anonymous session is registered
-	       for this station url.
-	       
-	       However, this cannot be optimal, we may end up
-	       asking a new playlist for another session, which 
-	       may stop any other simultaneous streaming on the 
-	       same session. *)
-	    begin
-	      try
-	        let ids = 
-                  Hashtbl.fold (fun a d c -> 
-		                  match d.station with
-                                    | Some (_,s) when s = station -> a :: c
-                                    | _ -> c)
-			       sessions []
-		in
-		List.hd ids
-	      with
-	        |  Failure "hd" -> init login
-	    end
-	  | _ -> init login 
-      in
+      let id = init login in
       try
         ignore(adjust id station);
         tracks id options
-      with Error _ when login <> None -> 
+      with Error _ -> 
           (* Retry in case of expired session *)
 	  clear id;
           let id = init login in
