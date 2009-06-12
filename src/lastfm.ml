@@ -151,7 +151,6 @@ module Audioscrobbler=
         | Some e -> Printf.sprintf "%.0f" e
         | None -> ""
 
-
     let clear sessionid =
         let keys = Hashtbl.fold (fun a b r -> if b = sessionid then a::r else r)
                       sessions []
@@ -159,7 +158,7 @@ module Audioscrobbler=
         ignore (List.map (fun x -> Hashtbl.remove sessions x) keys) ;
         Hashtbl.remove urls sessionid
 
-    let handshake client login = 
+    let handshake ?host client login = 
       let client,version,user,pass = 
          client.client,client.version,
          login.user,login.password
@@ -172,7 +171,12 @@ module Audioscrobbler=
            let pass_digest = Digest.string pass in
            let token = Digest.string((Digest.to_hex pass_digest) ^ timestamp) in
            let req = handshake_req client version user timestamp (Digest.to_hex token) in
-           let ans = request ~host:!base_host ~port:!base_port req in
+           let host,port = 
+             match host with
+               | Some (x,y) -> x,y
+               | None -> !base_host,!base_port
+           in
+           let ans = request ~host ~port req in
            let state,id,v = 
              try
                let lines = Pcre.split ~pat:"[\r\n]+" ans in
@@ -213,8 +217,19 @@ module Audioscrobbler=
 
     let audioscrobbler_post id base_url values = 
       let url = Neturl.parse_url base_url in
-      let host = Neturl.url_host url in
-      let port = Neturl.url_port url in
+      let host = 
+        try
+          Neturl.url_host url
+        with
+          (* This should not happend... *)
+          | Not_found -> !base_host
+      in
+      let port = 
+        try
+          Neturl.url_port url
+        with
+          | Not_found -> !base_port 
+      in
       let req = String.concat "/" (Neturl.url_path url) in
       let args = List.map (fun (a,b) -> 
                              Printf.sprintf "%s=%s" 
@@ -311,24 +326,24 @@ module Audioscrobbler=
       album = album ; tracknumber = tracknumber ; 
       musicbrainzid = musicbrainzid ; trackauth = trackauth }
 
-    let do_np client login song = 
-      let id = handshake client login in
+    let do_np ?host client login song = 
+      let id = handshake ?host client login in
       try
         np id song
       with
         | Error Badauth -> (* Retry in case of expired session id *)
 	                   clear id ;
-	                   let id = handshake client login in
+	                   let id = handshake ?host client login in
 		           np id song
 
-    let do_submit client login songs = 
-      let id = handshake client login in
+    let do_submit ?host client login songs = 
+      let id = handshake ?host client login in
       try 
         submit id songs
       with
         | Error Badauth -> (* Retry in case of expired session id *)
                            clear id ;
-                           let id = handshake client login in
+                           let id = handshake ?host client login in
                            submit id songs 
 
   end
@@ -452,7 +467,7 @@ module Radio=
     (* Core stuff.. *)
     
     let clear id =
-        Hashtbl.remove sessions id
+      Hashtbl.remove sessions id
     
     let init login = 
      try

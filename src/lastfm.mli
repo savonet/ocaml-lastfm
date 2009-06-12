@@ -105,8 +105,12 @@ sig
   
   (** [do_np client login song]
      execute a nowplaying request 
-     with authentification *)
-  val do_np : client -> login -> song -> unit
+     with authentification 
+
+     Optional host parameter is a pair
+     "host",port to override the global
+     values.*)
+  val do_np : ?host:(string*int) -> client -> login -> song -> unit
 
   (** [do_submit client login songs]
       execute a nowplaying request 
@@ -116,7 +120,7 @@ sig
      songs for which supplied informations
      were incomplete, with corresponding exception 
      (see [check_song] source) *)
-  val do_submit : client -> login -> song list -> (error * song) list
+  val do_submit : ?host:(string*int) -> client -> login -> song list -> (error * song) list
 
   (** {2 Advanced API} 
      
@@ -137,8 +141,12 @@ sig
     Check do_no and do_submit for examples. *)
 
   (** [handshake client login] 
-     open session, returns session ID *)
-  val handshake : client -> login -> string
+     open session, returns session ID 
+     
+     Optional host parameter is a pair 
+     "host",port to override the global
+     values. *)
+  val handshake : ?host:(string*int) -> client -> login -> string
 
   (** [np sessionID track]
      execute a nowplaying request *)
