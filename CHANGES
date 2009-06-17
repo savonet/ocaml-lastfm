@@ -1,5 +1,6 @@
 0.2.0 ()
 =====
+* Added support for --enable-debugging configure option
 * Fixed Makefile for BSD: call $(MAKE) for generating documentation.
 * Now using xmlm instead of xml-light.
 * Removed anonymous radio connection: no longer available upstream... :-(
