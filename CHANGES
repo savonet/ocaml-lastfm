@@ -1,4 +1,4 @@
-0.2.0 ()
+0.2.0 (12-10-2009)
 =====
 * Added support for --enable-debugging configure option
 * Fixed Makefile for BSD: call $(MAKE) for generating documentation.
