@@ -28,12 +28,24 @@ exception Http of string
 type client = { client : string ; version : string }
 type login = { user : string ; password : string }
 
-let request ?(post="") ?(headers=[]) ?(port=80) ~host req =
-let call = match post with
-   | "" -> new Http_client.get_call
-  	 | _ -> new Http_client.post_call
+let default_timeout = ref 5.
+
+let request ?(post="") ?timeout ?(headers=[]) ?(port=80) ~host req =
+  let timeout = 
+    match timeout with
+      | Some v -> v
+      | None   -> !default_timeout
+  in
+  let call = 
+    match post with
+      | "" -> new Http_client.get_call
+      | _  -> new Http_client.post_call
   in
   let pipeline = new Http_client.pipeline in
+  pipeline#set_options 
+    { pipeline#get_options with 
+        Http_client.connection_timeout = timeout 
+    } ;
   let http_headers = call#request_header `Base in
   let body = call#request_body in
   call#set_request_uri (Printf.sprintf "http://%s:%d%s" host port req) ;
@@ -45,13 +57,14 @@ let call = match post with
   begin
     match post with
   | "" -> ()
-  | _ -> begin
-  	         body#set_value post ; 
-  		 call#set_request_body body ;
-  		 http_headers#update_field 
-  		   "Content-length" 
-  		   (string_of_int (String.length post));
-  	       end
+  | _ -> 
+     begin
+       body#set_value post ; 
+       call#set_request_body body ;
+       http_headers#update_field 
+         "Content-length" 
+         (string_of_int (String.length post));
+     end
   end ;
   call#set_request_header http_headers ;
   pipeline#add call ;
@@ -136,8 +149,6 @@ module Audioscrobbler=
     (* urls contains id => (np_url,submit_url) *)
     let urls = Hashtbl.create 1
     let raise e = raise (Error e)
-    (* Wrapper for main request *)
-    let request = try request with e -> raise (Http (Printexc.to_string e))
     let arg_value_string x = 
       match x with 
         | Some e -> e
@@ -158,25 +169,25 @@ module Audioscrobbler=
         ignore (List.map (fun x -> Hashtbl.remove sessions x) keys) ;
         Hashtbl.remove urls sessionid
 
-    let handshake ?host client login = 
+    let handshake ?timeout ?host client login = 
       let client,version,user,pass = 
          client.client,client.version,
          login.user,login.password
       in
+      let host,port =
+        match host with
+          | Some (x,y) -> x,y
+          | None -> !base_host,!base_port
+      in
       try 
-        Hashtbl.find sessions (user,pass)
+        Hashtbl.find sessions (user,pass,(host,port))
       with
         | Not_found ->
            let timestamp = Printf.sprintf "%.0f" (Unix.time ()) in
            let pass_digest = Digest.string pass in
            let token = Digest.string((Digest.to_hex pass_digest) ^ timestamp) in
            let req = handshake_req client version user timestamp (Digest.to_hex token) in
-           let host,port = 
-             match host with
-               | Some (x,y) -> x,y
-               | None -> !base_host,!base_port
-           in
-           let ans = request ~host ~port req in
+           let ans = request ?timeout ~host ~port req in
            let state,id,v = 
              try
                let lines = Pcre.split ~pat:"[\r\n]+" ans in
@@ -187,7 +198,7 @@ module Audioscrobbler=
                | Not_found -> raise (error_of_response ans)
            in
            match error_of_response state with
-             | Success -> Hashtbl.replace sessions (user,pass) id; 
+             | Success -> Hashtbl.replace sessions (user,pass,(host,port)) id; 
                           Hashtbl.replace urls id v; id
              | e -> raise e
 
@@ -215,7 +226,7 @@ module Audioscrobbler=
         | _ -> ()
 
 
-    let audioscrobbler_post id base_url values = 
+    let audioscrobbler_post ?timeout id base_url values = 
       let url = Neturl.parse_url base_url in
       let host = 
         try
@@ -238,12 +249,12 @@ module Audioscrobbler=
       in
       let post = String.concat "&" args in
       let headers = [("Content-type","application/x-www-form-urlencoded")] in
-      let ans = request ~post:post ~headers:headers ~host:host ~port:port req in
+      let ans = request ?timeout ~post:post ~headers:headers ~host:host ~port:port req in
       match error_of_response ans with
         | Success -> ()
         | e -> clear id; raise e
 
-    let np id song = 
+    let np ?timeout id song = 
       let url,_ = 
         try 
           Hashtbl.find urls id
@@ -257,9 +268,9 @@ module Audioscrobbler=
                     ("n",arg_value_int song.tracknumber);
                     ("m",arg_value_string song.musicbrainzid)] 
       in
-      audioscrobbler_post id url values
+      audioscrobbler_post ?timeout id url values
 
-     let submit id songs = 
+     let submit ?timeout id songs = 
       let _,url = 
         try 
           Hashtbl.find urls id
@@ -314,7 +325,7 @@ module Audioscrobbler=
          | Error e -> failed := (e,song) :: !failed 
      in
      List.iter add_arg songs ;
-     audioscrobbler_post id url (!args) ;
+     audioscrobbler_post ?timeout id url (!args) ;
      !failed
 
     let get_song ?time ?source ?rating
@@ -326,20 +337,20 @@ module Audioscrobbler=
       album = album ; tracknumber = tracknumber ; 
       musicbrainzid = musicbrainzid ; trackauth = trackauth }
 
-    let do_np ?host client login song = 
+    let do_np ?timeout ?host client login song = 
       let id = handshake ?host client login in
       try
-        np id song
+        np ?timeout id song
       with
         | Error Badauth -> (* Retry in case of expired session id *)
 	                   clear id ;
 	                   let id = handshake ?host client login in
 		           np id song
 
-    let do_submit ?host client login songs = 
+    let do_submit ?timeout ?host client login songs = 
       let id = handshake ?host client login in
       try 
-        submit id songs
+        submit ?timeout id songs
       with
         | Error Badauth -> (* Retry in case of expired session id *)
                            clear id ;
@@ -374,8 +385,6 @@ module Radio=
    
     let _raise = raise
     let raise e = raise (Error e)
-    (* Wrapper for main request *)
-    let request ~host = try request ~host:host with e -> raise (Http (Printexc.to_string e))
 
     (* Some constant for the protocol *)
     let base_host = ref "ext.last.fm"
@@ -403,14 +412,22 @@ module Radio=
       in
       Printf.sprintf "%s?sk=%s&%s" url id options
 
-    let playlist id options = 
+    let playlist ?timeout id options = 
        let url = playlist_req id options in
-       let data = 
-         try
-           Http_client.Convenience.http_get url
-         with
-           | e -> raise (Http (Printexc.to_string e))
+       let url = Neturl.parse_url url in
+       let host = Neturl.url_host url in
+       let port = 
+        try
+         Neturl.url_port url 
+        with Not_found -> 80
        in
+       let query = Neturl.url_query url in
+       let path = 
+         Neturl.join_path 
+          (Neturl.url_path url) 
+       in
+       let req = Printf.sprintf "%s?%s" path query in
+       let data = request ?timeout ~port ~host req in
        let data = Netencoding.Base64.decode data in
        Netencoding.Url.decode data
     
@@ -460,7 +477,7 @@ module Radio=
                               Pcre.get_substring sub 2
           in
           { user = user ; password = password },
-                 Printf.sprintf "lastfm://%s" station,options
+          Printf.sprintf "lastfm://%s" station,options
         with
           | Not_found -> raise (Auth "Could not find login/password.") 
    
@@ -469,7 +486,7 @@ module Radio=
     let clear id =
       Hashtbl.remove sessions id
     
-    let init login = 
+    let init ?timeout login = 
      try
       Hashtbl.iter (fun x d -> 
 	              if d.login = login then _raise (Internal x))
@@ -479,7 +496,7 @@ module Radio=
        | Not_found -> 
            let user,password = login.user,login.password in
            let password = Digest.to_hex (Digest.string password) in
-           let ret = request ~host:!base_host (registered_handshake 
+           let ret = request ?timeout ~host:!base_host (registered_handshake 
              (Netencoding.Url.encode user) password)
            in
            let id,playlist_url,
@@ -494,7 +511,7 @@ module Radio=
            id
        | Internal x -> x
     
-    let adjust id req = 
+    let adjust ?timeout id req = 
       let d = 
         try
           Hashtbl.find sessions id
@@ -509,7 +526,7 @@ module Radio=
                 let http_req = station_set base_path id 
                    (Netencoding.Url.encode req)
                 in
-                let ret = request ~host:base_url http_req in
+                let ret = request ?timeout ~host:base_url http_req in
                 if check_adjust ret then
                  let args = parse_args ret in
                  ( Hashtbl.replace sessions id 
@@ -523,20 +540,20 @@ module Radio=
                     raise (Adjust (req,ret))
                   end
     
-    let tracks id options = 
+    let tracks ?timeout id options = 
       try
-        let playlist = playlist id options in
+        let playlist = playlist ?timeout id options in
         Xmlplaylist.tracks playlist
       with
         | Xmlplaylist.Error e -> clear id; raise Playlist 
         | Error e -> clear id; raise e
     
-    let get uri = 
+    let get ?timeout uri = 
       let login,station,options = parse uri in
-      let id = init login in
+      let id = init ?timeout login in
       try
-        ignore(adjust id station);
-        tracks id options
+        ignore(adjust ?timeout id station);
+        tracks ?timeout id options
       with Error _ -> 
           (* Retry in case of expired session *)
 	  clear id;

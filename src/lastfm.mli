@@ -26,6 +26,9 @@
 type client = { client : string ; version : string }
 type login = { user : string ; password : string }
 
+(** Default timeout. (5. seconds) *)
+val default_timeout : float ref 
+
 module Audioscrobbler :
 sig
 
@@ -110,7 +113,7 @@ sig
      Optional host parameter is a pair
      "host",port to override the global
      values.*)
-  val do_np : ?host:(string*int) -> client -> login -> song -> unit
+  val do_np : ?timeout:float -> ?host:(string*int) -> client -> login -> song -> unit
 
   (** [do_submit client login songs]
       execute a nowplaying request 
@@ -120,7 +123,7 @@ sig
      songs for which supplied informations
      were incomplete, with corresponding exception 
      (see [check_song] source) *)
-  val do_submit : ?host:(string*int) -> client -> login -> song list -> (error * song) list
+  val do_submit : ?timeout:float -> ?host:(string*int) -> client -> login -> song list -> (error * song) list
 
   (** {2 Advanced API} 
      
@@ -146,11 +149,11 @@ sig
      Optional host parameter is a pair 
      "host",port to override the global
      values. *)
-  val handshake : ?host:(string*int) -> client -> login -> string
+  val handshake : ?timeout:float -> ?host:(string*int) -> client -> login -> string
 
   (** [np sessionID track]
      execute a nowplaying request *)
-   val np : string -> song -> unit
+  val np : ?timeout:float -> string -> song -> unit
 
   (** [submit sessionID tracks]
      execute a submit request 
@@ -159,7 +162,7 @@ sig
      songs for which supplied informations
      were incomplete, with corresponding exception 
     (see check_song) *)
-   val submit : string -> song list -> (error * song) list
+  val submit : ?timeout:float -> string -> song list -> (error * song) list
 
 end
 
@@ -200,7 +203,7 @@ sig
       several anonymous radios, you better 
       use the advanced API to keep track 
       of every opened session. *)
-  val get : string -> track list
+  val get : ?timeout:float -> string -> track list
 
   (** {2 Advanced API} 
 
@@ -233,7 +236,7 @@ sig
   (** [init login] initiate lastfm session
     *
     * Returns the session id *)
-  val init : login -> string
+  val init : ?timeout:float -> login -> string
   
   (** [adjust id station] adjusts lastfm station 
     * for given session ID 
@@ -242,14 +245,14 @@ sig
     * by the server. Contains settings for adjusted
     * radio.
     *)
-  val adjust : string -> string -> (string*string) list
+  val adjust : ?timeout:float -> string -> string -> (string*string) list
 
   (** [playlist id] returns the raw xml content of the playlist *)
-  val playlist : string -> string option -> string
+  val playlist : ?timeout:float -> string -> string option -> string
 
   (** [tracks id] 
     * returns a list of metadatas,uri  *)
-  val tracks : string -> string option -> track list
+  val tracks : ?timeout:float -> string -> string option -> track list
   
   (** [clear id] closes and clear all 
     * informations about the given session ID *)
