@@ -30,6 +30,8 @@ type login = { user : string ; password : string }
   * that the modules require. *)
 module type Http_t =
 sig
+  exception Http of string
+
   val default_timeout : float ref
   val request : ?post:string -> ?timeout:float ->
                 ?headers:((string*string) list) ->

@@ -22,14 +22,14 @@
 
 (* lastfm protocol API for ocaml *)
 
-exception Http of string
-
 (* Records for client *)
 type client = { client : string ; version : string }
 type login = { user : string ; password : string }
 
 module type Http_t =
 sig
+  exception Http of string
+
   val default_timeout : float ref
   val request : ?post:string -> ?timeout:float -> 
                 ?headers:((string*string) list) ->
@@ -39,6 +39,8 @@ end
 
 module Http_ocamlnet =
 struct
+  exception Http of string
+
   let default_timeout = ref 5.
 
   let request ?(post="") ?timeout ?(headers=[]) ?(port=80) ~host req =
