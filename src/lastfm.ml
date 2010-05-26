@@ -153,7 +153,7 @@ module Audioscrobbler_generic(Http:Http_t) =
                 | Failed of string | UnknownError of string | Success
                 | Internal of string | BadData of string
     exception Error of error
-    
+ 
     let string_of_error e = 
       match e with
         | Http s -> Printf.sprintf "http connection failed: %s" s
@@ -192,6 +192,13 @@ module Audioscrobbler_generic(Http:Http_t) =
 	  | Error e -> e
       with
         | Not_found -> UnknownError "unrecognized response code"
+
+    (* We wrap Http.request to raise an internal exception. *)
+    let request ?post ?timeout ?headers ?port ~host req =
+      try
+        Http.request ?post ?timeout ?headers ?port ~host req
+      with
+        | Http.Http s -> raise (Error (Http s))
 
     (* Protocol constants *)
     let version = "1.2.1"
@@ -241,7 +248,7 @@ module Audioscrobbler_generic(Http:Http_t) =
            let pass_digest = Digest.string pass in
            let token = Digest.string((Digest.to_hex pass_digest) ^ timestamp) in
            let req = handshake_req client version user timestamp (Digest.to_hex token) in
-           let ans = Http.request ?timeout ~host ~port req in
+           let ans = request ?timeout ~host ~port req in
            let state,id,v = 
              try
                let lines = Pcre.split ~pat:"[\r\n]+" ans in
@@ -303,7 +310,7 @@ module Audioscrobbler_generic(Http:Http_t) =
       in
       let post = String.concat "&" args in
       let headers = [("Content-type","application/x-www-form-urlencoded")] in
-      let ans = Http.request ?timeout ~post:post ~headers:headers ~host:host ~port:port req in
+      let ans = request ?timeout ~post:post ~headers:headers ~host:host ~port:port req in
       match error_of_response ans with
         | Success -> ()
         | e -> clear id; raise e
@@ -456,6 +463,13 @@ module Radio_generic(Http:Http_t) =
         | Adjust (s,s') -> Printf.sprintf "could not adjust station to %s:\n%s\nIs the URI valid ?" s s'
         | Playlist -> "error while parsing the playlist"
         | Empty -> "no files available"
+
+    (* We wrap Http.request to raise an internal exception. *)
+    let request ?post ?timeout ?headers ?port ~host req =
+      try
+        Http.request ?post ?timeout ?headers ?port ~host req
+      with
+        | Http.Http s -> raise (Error (Http s))
    
     let _raise = raise
     let raise e = raise (Error e)
@@ -501,7 +515,7 @@ module Radio_generic(Http:Http_t) =
           (Neturl.url_path url) 
        in
        let req = Printf.sprintf "%s?%s" path query in
-       let data = Http.request ?timeout ~port ~host req in
+       let data = request ?timeout ~port ~host req in
        let data = Netencoding.Base64.decode data in
        Netencoding.Url.decode data
     
@@ -570,7 +584,7 @@ module Radio_generic(Http:Http_t) =
        | Not_found -> 
            let user,password = login.user,login.password in
            let password = Digest.to_hex (Digest.string password) in
-           let ret = Http.request ?timeout ~host:!base_host (registered_handshake 
+           let ret = request ?timeout ~host:!base_host (registered_handshake 
              (Netencoding.Url.encode user) password)
            in
            let id,playlist_url,
@@ -600,7 +614,7 @@ module Radio_generic(Http:Http_t) =
                 let http_req = station_set base_path id 
                    (Netencoding.Url.encode req)
                 in
-                let ret = Http.request ?timeout ~host:base_url http_req in
+                let ret = request ?timeout ~host:base_url http_req in
                 if check_adjust ret then
                  let args = parse_args ret in
                  ( Hashtbl.replace sessions id 
