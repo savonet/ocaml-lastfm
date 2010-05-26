@@ -28,56 +28,108 @@ exception Http of string
 type client = { client : string ; version : string }
 type login = { user : string ; password : string }
 
-let default_timeout = ref 5.
+module type Http_t =
+sig
+  val default_timeout : float ref
+  val request : ?post:string -> ?timeout:float -> 
+                ?headers:((string*string) list) ->
+                ?port:int -> host:string -> string ->
+                string
+end
 
-let request ?(post="") ?timeout ?(headers=[]) ?(port=80) ~host req =
-  let timeout = 
-    match timeout with
-      | Some v -> v
-      | None   -> !default_timeout
-  in
-  let call = 
-    match post with
-      | "" -> new Http_client.get_call
-      | _  -> new Http_client.post_call
-  in
-  let pipeline = new Http_client.pipeline in
-  pipeline#set_options 
-    { pipeline#get_options with 
-        Http_client.connection_timeout = timeout 
-    } ;
-  let http_headers = call#request_header `Base in
-  let body = call#request_body in
-  call#set_request_uri (Printf.sprintf "http://%s:%d%s" host port req) ;
-  let headers = ("User-agent",
-      Printf.sprintf "ocaml-lastfm/%s" Lastfm_constants.version) 
-      :: headers
-  in
-  http_headers#set_fields headers ;
-  begin
-    match post with
-  | "" -> ()
-  | _ -> 
-     begin
-       body#set_value post ; 
-       call#set_request_body body ;
-       http_headers#update_field 
-         "Content-length" 
-         (string_of_int (String.length post));
-     end
-  end ;
-  call#set_request_header http_headers ;
-  pipeline#add call ;
-  try
-    pipeline#run () ;
-    call#response_body#value
-  with
-    | Http_client.Http_protocol e 
-    | e -> 
-       pipeline#reset() ; 
-       raise (Http  (Printexc.to_string e))
+module Http_ocamlnet =
+struct
+  let default_timeout = ref 5.
 
-module Audioscrobbler=
+  let request ?(post="") ?timeout ?(headers=[]) ?(port=80) ~host req =
+    let timeout = 
+      match timeout with
+        | Some v -> v
+        | None   -> !default_timeout
+    in
+    let call = 
+      match post with
+        | "" -> new Http_client.get_call
+        | _  -> new Http_client.post_call
+    in
+    let pipeline = new Http_client.pipeline in
+    pipeline#set_options 
+      { pipeline#get_options with 
+          Http_client.connection_timeout = timeout 
+      } ;
+    let http_headers = call#request_header `Base in
+    let body = call#request_body in
+    call#set_request_uri (Printf.sprintf "http://%s:%d%s" host port req) ;
+    let headers = ("User-agent",
+        Printf.sprintf "ocaml-lastfm/%s" Lastfm_constants.version) 
+        :: headers
+    in
+    http_headers#set_fields headers ;
+    begin
+      match post with
+        | "" -> ()
+        | _ -> 
+          begin
+           body#set_value post ; 
+           call#set_request_body body ;
+           http_headers#update_field 
+             "Content-length" 
+             (string_of_int (String.length post));
+          end
+    end ;
+    call#set_request_header http_headers ;
+    pipeline#add call ;
+    try
+      pipeline#run () ;
+      call#response_body#value
+    with
+      | Http_client.Http_protocol e 
+      | e -> 
+         pipeline#reset() ; 
+         raise (Http  (Printexc.to_string e))
+end
+
+module type Audioscrobbler_t = 
+sig
+  type source = User | Broadcast | Recommendation | Lastfm | Unknown
+  type rating = Love | Ban | Skip
+  type action = NowPlaying | Submit
+  type song = { artist : string; track: string; time: float option; 
+                source : source option; rating : rating option ;
+                length : float option ; album : string option ; 
+                trackauth : string option ; tracknumber : int option; 
+                musicbrainzid : string option }
+  type error = Http of string | Banned | Badauth | Badtime
+              | Failed of string | UnknownError of string | Success
+              | Internal of string | BadData of string
+
+  exception Error of error
+  
+  val string_of_error : error -> string
+  val base_port : int ref
+  val base_host : string ref
+  val get_song :
+      ?time:float ->
+      ?source:source ->
+      ?rating:rating ->
+      ?length:float ->
+      ?album:string ->
+      ?tracknumber:int ->
+      ?musicbrainzid:string ->
+      ?trackauth:string ->
+      artist:string ->
+      track:string ->
+      unit ->
+      song
+  val check_song : song -> action -> unit
+  val do_np : ?timeout:float -> ?host:(string*int) -> client -> login -> song -> unit
+  val do_submit : ?timeout:float -> ?host:(string*int) -> client -> login -> song list -> (error * song) list
+  val handshake : ?timeout:float -> ?host:(string*int) -> client -> login -> string
+  val np : ?timeout:float -> string -> song -> unit
+  val submit : ?timeout:float -> string -> song list -> (error * song) list
+end
+
+module Audioscrobbler_generic(Http:Http_t) =
   struct
 
     (* See http://www.audioscrobbler.net/development/protocol/
@@ -187,7 +239,7 @@ module Audioscrobbler=
            let pass_digest = Digest.string pass in
            let token = Digest.string((Digest.to_hex pass_digest) ^ timestamp) in
            let req = handshake_req client version user timestamp (Digest.to_hex token) in
-           let ans = request ?timeout ~host ~port req in
+           let ans = Http.request ?timeout ~host ~port req in
            let state,id,v = 
              try
                let lines = Pcre.split ~pat:"[\r\n]+" ans in
@@ -249,7 +301,7 @@ module Audioscrobbler=
       in
       let post = String.concat "&" args in
       let headers = [("Content-type","application/x-www-form-urlencoded")] in
-      let ans = request ?timeout ~post:post ~headers:headers ~host:host ~port:port req in
+      let ans = Http.request ?timeout ~post:post ~headers:headers ~host:host ~port:port req in
       match error_of_response ans with
         | Success -> ()
         | e -> clear id; raise e
@@ -359,7 +411,27 @@ module Audioscrobbler=
 
   end
 
-module Radio=
+module Audioscrobbler = Audioscrobbler_generic(Http_ocamlnet)
+
+module type Radio_t = 
+sig
+  type track = (string * string) list * string
+  type error = Http of string | Auth of string | Adjust of string*string | Playlist | Empty
+
+  exception Error of error
+  
+  val string_of_error : error -> string
+  val base_host : string ref 
+  val get : ?timeout:float -> string -> track list
+  val parse : string -> login*string*(string option)
+  val init : ?timeout:float -> login -> string
+  val adjust : ?timeout:float -> string -> string -> (string*string) list
+  val playlist : ?timeout:float -> string -> string option -> string
+  val tracks : ?timeout:float -> string -> string option -> track list
+  val clear : string -> unit
+end
+
+module Radio_generic(Http:Http_t) =
   struct
 
     (* Type for track datas 
@@ -427,7 +499,7 @@ module Radio=
           (Neturl.url_path url) 
        in
        let req = Printf.sprintf "%s?%s" path query in
-       let data = request ?timeout ~port ~host req in
+       let data = Http.request ?timeout ~port ~host req in
        let data = Netencoding.Base64.decode data in
        Netencoding.Url.decode data
     
@@ -496,7 +568,7 @@ module Radio=
        | Not_found -> 
            let user,password = login.user,login.password in
            let password = Digest.to_hex (Digest.string password) in
-           let ret = request ?timeout ~host:!base_host (registered_handshake 
+           let ret = Http.request ?timeout ~host:!base_host (registered_handshake 
              (Netencoding.Url.encode user) password)
            in
            let id,playlist_url,
@@ -526,7 +598,7 @@ module Radio=
                 let http_req = station_set base_path id 
                    (Netencoding.Url.encode req)
                 in
-                let ret = request ?timeout ~host:base_url http_req in
+                let ret = Http.request ?timeout ~host:base_url http_req in
                 if check_adjust ret then
                  let args = parse_args ret in
                  ( Hashtbl.replace sessions id 
@@ -562,4 +634,6 @@ module Radio=
 	  tracks id options
 
 end
+
+module Radio = Radio_generic(Http_ocamlnet)
 

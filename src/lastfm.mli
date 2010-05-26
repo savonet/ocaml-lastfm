@@ -26,10 +26,19 @@
 type client = { client : string ; version : string }
 type login = { user : string ; password : string }
 
-(** Default timeout. (5. seconds) *)
-val default_timeout : float ref 
+(** This is the type of Http request API
+  * that the modules require. *)
+module type Http_t =
+sig
+  val default_timeout : float ref
+  val request : ?post:string -> ?timeout:float ->
+                ?headers:((string*string) list) ->
+                ?port:int -> host:string -> string ->
+                string
+end
 
-module Audioscrobbler :
+(** This is the type of the Audioscrobbler API. *)
+module type Audioscrobbler_t = 
 sig
 
   (** Audioscrobbler is the submission protocol as described at
@@ -166,7 +175,8 @@ sig
 
 end
 
-module Radio : 
+(** This is the type of the Radio API. *)
+module type Radio_t = 
 sig
 
 (** API for using lastfm radios 
@@ -259,3 +269,23 @@ sig
   val clear : string -> unit
 
 end
+
+(** Implementation of the Http request using ocamlnet. *)
+module Http_ocamlnet : Http_t
+
+(** Generic implementation of Audioscrobbler, independent 
+  * from the Http request. *)
+module Audioscrobbler_generic (Http : Http_t) : Audioscrobbler_t
+
+(** Implementation of Audioscrobbler using the ocamlnet
+  * Http request. *)
+module Audioscrobbler : Audioscrobbler_t
+
+(** Generic implementation of the Radio API, independant
+  * from the Http request. *)
+module Radio_generic (Http : Http_t) : Radio_t
+
+(** Implementation of the Radio API using the ocamlnet
+  * Http request. *)
+module Radio : Radio_t
+
