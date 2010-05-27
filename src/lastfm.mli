@@ -30,13 +30,14 @@ type login = { user : string ; password : string }
   * that the modules require. *)
 module type Http_t =
 sig
+  type request = Get | Post of string
+
   exception Http of string
 
   val default_timeout : float ref
-  val request : ?post:string -> ?timeout:float ->
-                ?headers:((string*string) list) ->
-                ?port:int -> host:string -> string ->
-                string
+  val request : ?timeout:float -> ?headers:((string*string) list) ->
+                ?port:int -> host:string -> url:string ->
+                request:request -> unit -> string
 end
 
 (** This is the type of the Audioscrobbler API. *)

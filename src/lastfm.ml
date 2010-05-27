@@ -28,31 +28,34 @@ type login = { user : string ; password : string }
 
 module type Http_t =
 sig
+  type request = Get | Post of string
+
   exception Http of string
 
   val default_timeout : float ref
-  val request : ?post:string -> ?timeout:float -> 
-                ?headers:((string*string) list) ->
-                ?port:int -> host:string -> string ->
-                string
+  val request : ?timeout:float -> ?headers:((string*string) list) ->
+                ?port:int -> host:string -> url:string ->
+                request:request -> unit -> string
 end
 
 module Http_ocamlnet =
 struct
+  type request = Get | Post of string
+
   exception Http of string
 
   let default_timeout = ref 5.
 
-  let request ?(post="") ?timeout ?(headers=[]) ?(port=80) ~host req =
+  let request ?timeout ?(headers=[]) ?(port=80) ~host ~url ~request () =
     let timeout = 
       match timeout with
         | Some v -> v
         | None   -> !default_timeout
     in
     let call = 
-      match post with
-        | "" -> new Http_client.get_call
-        | _  -> new Http_client.post_call
+      match request with
+        | Get -> new Http_client.get_call
+        | Post _ -> new Http_client.post_call
     in
     let pipeline = new Http_client.pipeline in
     pipeline#set_options 
@@ -61,16 +64,16 @@ struct
       } ;
     let http_headers = call#request_header `Base in
     let body = call#request_body in
-    call#set_request_uri (Printf.sprintf "http://%s:%d%s" host port req) ;
+    call#set_request_uri (Printf.sprintf "http://%s:%d%s" host port url) ;
     let headers = ("User-agent",
         Printf.sprintf "ocaml-lastfm/%s" Lastfm_constants.version) 
         :: headers
     in
     http_headers#set_fields headers ;
     begin
-      match post with
-        | "" -> ()
-        | _ -> 
+      match request with
+        | Get -> ()
+        | Post post -> 
           begin
            body#set_value post ; 
            call#set_request_body body ;
@@ -194,9 +197,15 @@ module Audioscrobbler_generic(Http:Http_t) =
         | Not_found -> UnknownError "unrecognized response code"
 
     (* We wrap Http.request to raise an internal exception. *)
-    let request ?post ?timeout ?headers ?port ~host req =
+    let request ?post ?timeout ?headers ?port ~host url =
       try
-        Http.request ?post ?timeout ?headers ?port ~host req
+        let request = 
+           match post with
+             | Some "" 
+             | None    -> Http.Get
+             | Some v  -> Http.Post v
+        in
+        Http.request ?timeout ?headers ?port ~host ~url ~request ()
       with
         | Http.Http s -> raise (Error (Http s))
 
@@ -465,9 +474,15 @@ module Radio_generic(Http:Http_t) =
         | Empty -> "no files available"
 
     (* We wrap Http.request to raise an internal exception. *)
-    let request ?post ?timeout ?headers ?port ~host req =
+    let request ?post ?timeout ?headers ?port ~host url =
       try
-        Http.request ?post ?timeout ?headers ?port ~host req
+        let request = 
+           match post with
+             | Some ""
+             | None    -> Http.Get
+             | Some v  -> Http.Post v
+        in
+        Http.request ?timeout ?headers ?port ~host ~url ~request ()
       with
         | Http.Http s -> raise (Error (Http s))
    
