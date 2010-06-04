@@ -1,6 +1,6 @@
 
 # check for one particular file of the sources 
-AC_INIT(ocaml-lastfm, 0.2.0, savonet-users@lists.sourceforge.net)
+AC_INIT(ocaml-lastfm, 0.3.0, savonet-users@lists.sourceforge.net)
 
 VERSION=$PACKAGE_VERSION
 AC_SUBST(VERSION)
@@ -136,22 +136,26 @@ fi
 # ocamlnet
 #
 
+AC_MSG_CHECKING(for netclient from ocamlnet)
+   if ! $OCAMLFIND query netclient > /dev/null 2>&1 ; then
+       AC_MSG_RESULT([Not found, will only build generic modules.])
+       OCAMLNET_FILES=""
+   else
+       INC="$INC `$OCAMLFIND query netclient`"
+       requires="$requires netclient"
+       AC_MSG_RESULT(ok)
+       OCAMLNET_FILES="lastfm.mli lastfm.ml"
+fi
+
+if test -n "$OCAMLNET_FILES" ; then
 AC_MSG_CHECKING(for netstring from ocamlnet)
    if ! $OCAMLFIND query netstring > /dev/null 2>&1 ; then
        AC_MSG_ERROR(Not found.)
    else
-   INC="$INC `$OCAMLFIND query netstring`"
-   requires="$requires netstring"
-   AC_MSG_RESULT(ok)
+       INC="$INC `$OCAMLFIND query netstring`"
+       requires="$requires netstring"
+       AC_MSG_RESULT(ok)
 fi
-
-AC_MSG_CHECKING(for netclient from ocamlnet)
-   if ! $OCAMLFIND query netclient > /dev/null 2>&1 ; then
-       AC_MSG_ERROR(Not found.)
-   else
-   INC="$INC `$OCAMLFIND query netclient`"
-   requires="$requires netclient"
-   AC_MSG_RESULT(ok)
 fi
 
 if test "$OCAMLOPT" = no ; then
@@ -176,6 +180,7 @@ AC_SUBST(OCAMLFIND_LDCONF)
 AC_SUBST(OCAMLCP)
 AC_SUBST(CAMLLIBPATH)
 AC_SUBST(BEST)
+AC_SUBST(OCAMLNET_FILES)
 ALL_INC="`ocamlfind query -r -separator " " $requires` $_INC"
 INC="$INC $_INC"
 AC_SUBST(INC)

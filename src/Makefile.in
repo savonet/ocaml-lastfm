@@ -23,7 +23,7 @@ DVIPS = @DVIPS@
 PS2PDF = @PS2PDF@
 OCAMLLIBPATH = @CAMLLIBPATH@
 
-SOURCES = lastfm_constants.ml lastfm.ml lastfm.mli
+SOURCES = lastfm_constants.ml lastfm_generic.ml lastfm_generic.mli @OCAMLNET_FILES@
 RESULT = lastfm
 OCAMLDOCFLAGS = -stars
 LIBINSTALL_FILES = $(wildcard *.mli *.cmi *.cma *.cmxa *.cmx *.a *.so)

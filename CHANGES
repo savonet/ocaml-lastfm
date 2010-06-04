@@ -1,4 +1,4 @@
-0.2.1 ()
+0.3.0 ()
 =====
 * Added timeout for http operations (#351)
 * Fixed bug when submitting to two different
