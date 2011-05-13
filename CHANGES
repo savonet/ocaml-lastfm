@@ -1,4 +1,4 @@
-0.3.0 ()
+0.3.0 (13-05-2011)
 =====
 * Added timeout for http operations (#351)
 * Fixed bug when submitting to two different
