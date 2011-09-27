@@ -1,14 +1,12 @@
 
 # check for one particular file of the sources 
-AC_INIT(ocaml-lastfm, 0.3.0, savonet-users@lists.sourceforge.net)
+AC_INIT([ocaml-lastfm],[0.3.0],[savonet-users@lists.sourceforge.net])
 
 VERSION=$PACKAGE_VERSION
 AC_SUBST(VERSION)
 AC_MSG_RESULT([configuring $PACKAGE_STRING])
 
-AC_CHECK_OCAML_COMPILERS()
-
-AC_PROG_CC()
+AC_BASE_CHECKS()
 
 AC_MSG_CHECKING(for ocaml-pcre)
    if ! $OCAMLFIND query pcre > /dev/null 2>&1 ; then
@@ -23,8 +21,7 @@ fi
 # xmlplaylist
 #
 
-AC_ARG_WITH([xmlplaylist-dir],AC_HELP_STRING([--with-xmlplaylist-dir=path],
-        [use "path" as the location of ocaml-xmlplaylist (autodetected by default)]))
+AC_ARG_WITH([xmlplaylist-dir],AS_HELP_STRING([--with-xmlplaylist-dir=path],[use "path" as the location of ocaml-xmlplaylist (autodetected by default)]))
 if test -z "$with_xmlplaylist_dir"; then
   AC_MSG_CHECKING(for ocaml-xmlplaylist)
      if ! $OCAMLFIND query xmlplaylist > /dev/null 2>&1 ; then
