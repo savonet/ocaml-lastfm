@@ -63,6 +63,10 @@ AC_MSG_CHECKING(for netstring from ocamlnet)
 fi
 fi
 
+# Bytes
+AC_CHECK_OCAML_BINDING([bytes],[],[],[1])
+INC="$INC `$OCAMLFIND query bytes`"
+
 # substitutions to perform
 AC_SUBST(VERSION)
 AC_SUBST(OCAMLNET_FILES)

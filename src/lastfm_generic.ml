@@ -76,27 +76,6 @@ let parse_url s =
 (* URL encoding/decoging according to RFC 1738, RFC 1630.
  * Borrowed from ocamlnet. *)
 
-(** Converts k to a 2-digit hexadecimal string. *)
-let to_hex2 =
-  let hex_digits =
-    [| '0'; '1'; '2'; '3'; '4'; '5'; '6'; '7';
-       '8'; '9'; 'A'; 'B'; 'C'; 'D'; 'E'; 'F' |]
-  in
-    fun k ->
-      let s = String.create 2 in
-        s.[0] <- hex_digits.( (k lsr 4) land 15 ) ;
-        s.[1] <- hex_digits.( k land 15 ) ;
-        s
-
-let url_encode ?(plus=true) s =
-  Pcre.substitute
-    ~pat:"[^A-Za-z0-9_.!*-]"
-    ~subst:(fun x ->
-              if plus && x = " " then "+" else
-                let k = Char.code x.[0] in
-                  "%" ^ to_hex2 k)
-    s
-
 let of_hex1 c =
   match c with
     | '0'..'9' -> Char.code c - Char.code '0'
@@ -127,9 +106,9 @@ let to_hex2 =
        '8'; '9'; 'A'; 'B'; 'C'; 'D'; 'E'; 'F' |]
   in
     fun k ->
-      let s = String.create 2 in
-        s.[0] <- hex_digits.( (k lsr 4) land 15 ) ;
-        s.[1] <- hex_digits.( k land 15 ) ;
+      let s = Bytes.create 2 in
+        Bytes.set s 0 (hex_digits.( (k lsr 4) land 15 )) ;
+        Bytes.set s 1 (hex_digits.( k land 15 )) ;
         s
 
 let url_encode ?(plus=true) s =
@@ -719,7 +698,7 @@ module Radio_generic(Http:Http_t) =
         let playlist = playlist ?timeout id options in
         Xmlplaylist.tracks playlist
       with
-        | Xmlplaylist.Error e -> clear id; raise Playlist 
+        | Xmlplaylist.Error _ -> clear id; raise Playlist 
         | Error e -> clear id; raise e
     
     let get ?timeout uri = 

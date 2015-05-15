@@ -1,3 +1,7 @@
+0.3.1 ()
+=====
+* Switch to Bytes API.
+
 0.3.0 (13-05-2011)
 =====
 * Added timeout for http operations (#351)
