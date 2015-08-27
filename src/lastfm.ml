@@ -38,13 +38,13 @@ struct
     in
     let call = 
       match request with
-        | Get -> new Http_client.get_call
-        | Post _ -> new Http_client.post_call
+        | Get -> new Nethttp_client.get_call
+        | Post _ -> new Nethttp_client.post_call
     in
-    let pipeline = new Http_client.pipeline in
+    let pipeline = new Nethttp_client.pipeline in
     pipeline#set_options 
       { pipeline#get_options with 
-          Http_client.connection_timeout = timeout 
+          Nethttp_client.connection_timeout = timeout 
       } ;
     let http_headers = call#request_header `Base in
     let body = call#request_body in
@@ -72,7 +72,7 @@ struct
       pipeline#run () ;
       call#response_body#value
     with
-      | Http_client.Http_protocol e 
+      | Nethttp_client.Http_protocol e 
       | e -> 
          pipeline#reset() ; 
          raise (Http  (Printexc.to_string e))

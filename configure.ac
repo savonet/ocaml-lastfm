@@ -42,25 +42,30 @@ fi
 #
 
 AC_MSG_CHECKING(for netclient from ocamlnet)
-   if ! $OCAMLFIND query netclient > /dev/null 2>&1 ; then
-       AC_MSG_RESULT([Not found, will only build generic modules.])
-       OCAMLNET_FILES=""
-   else
-       INC="$INC `$OCAMLFIND query netclient`"
-       requires="$requires netclient"
-       AC_MSG_RESULT(ok)
-       OCAMLNET_FILES="lastfm.mli lastfm.ml"
+if ! $OCAMLFIND query netclient > /dev/null 2>&1 ; then
+  AC_MSG_RESULT([Not found, will only build generic modules.])
+  OCAMLNET_FILES=""
+else
+  INC="$INC `$OCAMLFIND query netclient`"
+  requires="$requires netclient"
+  OCAMLNET_FILES="lastfm.mli lastfm.ml"
+  AC_MSG_RESULT(ok)
+fi
+
+AC_CHECK_OCAML_BINDING([netclient],[4.0.2])
+if test -z "${W_NETCLIENT}"; then
+  OCAMLNET_FILES=""
 fi
 
 if test -n "$OCAMLNET_FILES" ; then
-AC_MSG_CHECKING(for netstring from ocamlnet)
-   if ! $OCAMLFIND query netstring > /dev/null 2>&1 ; then
-       AC_MSG_ERROR(Not found.)
-   else
-       INC="$INC `$OCAMLFIND query netstring`"
-       requires="$requires netstring"
-       AC_MSG_RESULT(ok)
-fi
+  AC_MSG_CHECKING(for netstring from ocamlnet)
+  if ! $OCAMLFIND query netstring > /dev/null 2>&1 ; then
+    AC_MSG_ERROR(Not found.)
+  else
+    INC="$INC `$OCAMLFIND query netstring`"
+    requires="$requires netstring"
+    AC_MSG_RESULT(ok)
+  fi
 fi
 
 # Bytes
