@@ -1,3 +1,7 @@
+0.3.2 ()
+=====
+* Fix compilation with OCaml >= 4.06
+
 0.3.1 (03-08-2015)
 =====
 * Switch to Bytes API.

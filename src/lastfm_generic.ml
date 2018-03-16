@@ -57,9 +57,9 @@ let decode64 s =
         | _ -> failwith "decode64: invalid encoding"
     in
     let len = List.length result in
-    let s = String.make len ' ' in
-      ignore (List.fold_left (fun i c -> s.[i] <- c ; i-1) (len-1) result) ;
-      s
+    let s = Bytes.make len ' ' in
+      ignore (List.fold_left (fun i c -> Bytes.set s i c ; i-1) (len-1) result) ;
+      Bytes.to_string s
 
 let parse_url s = 
   let f h p r =
@@ -109,7 +109,7 @@ let to_hex2 =
       let s = Bytes.create 2 in
         Bytes.set s 0 (hex_digits.( (k lsr 4) land 15 )) ;
         Bytes.set s 1 (hex_digits.( k land 15 )) ;
-        s
+        Bytes.to_string s
 
 let url_encode ?(plus=true) s =
   Pcre.substitute
