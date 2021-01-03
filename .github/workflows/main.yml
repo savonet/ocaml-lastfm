@@ -10,4 +10,4 @@ jobs:
     - uses: actions/checkout@v1
     - uses: avsm/setup-ocaml@master
     - run: opam pin add -n .
-    - run: opam depext -yti lastfm
+    - run: opam depext -yti ocamlnet lastfm
