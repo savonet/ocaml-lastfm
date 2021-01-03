@@ -1,8 +1,0 @@
-SOURCES = submit.ml
-RESULT = submit
-INCDIRS = ../src @ALL_INC@
-LIBS = @all_requires@ lastfm
-
-all: nc
-
--include OCamlMakefile

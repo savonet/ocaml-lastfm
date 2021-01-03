@@ -22,63 +22,52 @@
 
 (* lastfm protocol API for ocaml *)
 
-module Http_ocamlnet =
-struct
+module Http_ocamlnet = struct
   type request = Get | Post of string
 
   exception Http of string
 
   let default_timeout = ref 5.
 
-  let request ?timeout ?(headers=[]) ?(port=80) ~host ~url ~request () =
-    let timeout = 
-      match timeout with
-        | Some v -> v
-        | None   -> !default_timeout
-    in
-    let call = 
+  let request ?timeout ?(headers = []) ?(port = 80) ~host ~url ~request () =
+    let timeout = match timeout with Some v -> v | None -> !default_timeout in
+    let call =
       match request with
         | Get -> new Nethttp_client.get_call
         | Post _ -> new Nethttp_client.post_call
     in
     let pipeline = new Nethttp_client.pipeline in
-    pipeline#set_options 
-      { pipeline#get_options with 
-          Nethttp_client.connection_timeout = timeout 
-      } ;
+    pipeline#set_options
+      {
+        (pipeline#get_options) with
+        Nethttp_client.connection_timeout = timeout;
+      };
     let http_headers = call#request_header `Base in
     let body = call#request_body in
-    call#set_request_uri (Printf.sprintf "http://%s:%d%s" host port url) ;
-    let headers = ("User-agent",
-        Printf.sprintf "ocaml-lastfm/%s" Lastfm_constants.version) 
-        :: headers
+    call#set_request_uri (Printf.sprintf "http://%s:%d%s" host port url);
+    let headers =
+      ("User-agent", Printf.sprintf "ocaml-lastfm/%s" Lastfm_constants.version)
+      :: headers
     in
-    http_headers#set_fields headers ;
+    http_headers#set_fields headers;
     begin
       match request with
-        | Get -> ()
-        | Post post -> 
-          begin
-           body#set_value post ; 
-           call#set_request_body body ;
-           http_headers#update_field 
-             "Content-length" 
-             (string_of_int (String.length post));
-          end
-    end ;
-    call#set_request_header http_headers ;
-    pipeline#add call ;
+      | Get -> ()
+      | Post post ->
+          body#set_value post;
+          call#set_request_body body;
+          http_headers#update_field "Content-length"
+            (string_of_int (String.length post))
+    end;
+    call#set_request_header http_headers;
+    pipeline#add call;
     try
-      pipeline#run () ;
+      pipeline#run ();
       call#response_body#value
-    with
-      | Nethttp_client.Http_protocol e 
-      | e -> 
-         pipeline#reset() ; 
-         raise (Http  (Printexc.to_string e))
+    with Nethttp_client.Http_protocol e | e ->
+      pipeline#reset ();
+      raise (Http (Printexc.to_string e))
 end
 
-module Audioscrobbler = Lastfm_generic.Audioscrobbler_generic(Http_ocamlnet)
-
-module Radio = Lastfm_generic.Radio_generic(Http_ocamlnet)
-
+module Audioscrobbler = Lastfm_generic.Audioscrobbler_generic (Http_ocamlnet)
+module Radio = Lastfm_generic.Radio_generic (Http_ocamlnet)

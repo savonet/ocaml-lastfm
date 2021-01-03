@@ -22,11 +22,8 @@ let _ =
   try
     let uri = Sys.argv.(1) in
     let tracks = Lastfm.Radio.get uri in
-    let metas,track = List.hd tracks in
-    Printf.printf "Got track: %s\n" track ;
-    List.iter (fun (a,b) -> 
-      Printf.printf "Metadata: %s: %s\n"
-      a b ) metas
-  with
-    | Lastfm.Radio.Error(e) -> Printf.printf "Failed: %s"
-                          (Lastfm.Radio.string_of_error e)
+    let metas, track = List.hd tracks in
+    Printf.printf "Got track: %s\n" track;
+    List.iter (fun (a, b) -> Printf.printf "Metadata: %s: %s\n" a b) metas
+  with Lastfm.Radio.Error e ->
+    Printf.printf "Failed: %s" (Lastfm.Radio.string_of_error e)

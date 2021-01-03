@@ -23,27 +23,32 @@
 (** API to various lastfm protocols (generic modules). *)
 
 (** Records for login and client *)
-type client = { client : string ; version : string }
-type login = { user : string ; password : string }
+type client = { client : string; version : string }
+
+type login = { user : string; password : string }
 
 (** This is the type of Http request API
   * that the modules require. *)
-module type Http_t =
-sig
+module type Http_t = sig
   type request = Get | Post of string
 
   exception Http of string
 
   val default_timeout : float ref
-  val request : ?timeout:float -> ?headers:((string*string) list) ->
-                ?port:int -> host:string -> url:string ->
-                request:request -> unit -> string
+
+  val request :
+    ?timeout:float ->
+    ?headers:(string * string) list ->
+    ?port:int ->
+    host:string ->
+    url:string ->
+    request:request ->
+    unit ->
+    string
 end
 
 (** This is the type of the Audioscrobbler API. *)
-module type Audioscrobbler_t = 
-sig
-
+module type Audioscrobbler_t = sig
   (** Audioscrobbler is the submission protocol as described at
     
      {{:http://www.audioscrobbler.net/development/protocol/}http://www.audioscrobbler.net/development/protocol/} *)
@@ -60,18 +65,33 @@ sig
   type action = NowPlaying | Submit
 
   (** song submission type *)
-  type song = { artist : string; track: string; time: float option; 
-                source : source option; rating : rating option ;
-                length : float option ; album : string option ; 
-                trackauth : string option ; tracknumber : int option; 
-                musicbrainzid : string option }
+  type song = {
+    artist : string;
+    track : string;
+    time : float option;
+    source : source option;
+    rating : rating option;
+    length : float option;
+    album : string option;
+    trackauth : string option;
+    tracknumber : int option;
+    musicbrainzid : string option;
+  }
 
   (** various errors *)
-  type error = Http of string | Banned | Badauth | Badtime
-              | Failed of string | UnknownError of string | Success
-              | Internal of string | BadData of string
+  type error =
+    | Http of string
+    | Banned
+    | Badauth
+    | Badtime
+    | Failed of string
+    | UnknownError of string
+    | Success
+    | Internal of string
+    | BadData of string
+
   exception Error of error
-  
+
   (** Get meaning of Error e *)
   val string_of_error : error -> string
 
@@ -85,25 +105,25 @@ sig
 
      Functions common to both basic and advanced APIs *)
 
-    (** [get_song] 
+  (** [get_song] 
         create a song record based on given values.
 
         Optional records can be ommited there. *)
-    val get_song :
-      ?time:float ->
-      ?source:source ->
-      ?rating:rating ->
-      ?length:float ->
-      ?album:string ->
-      ?tracknumber:int ->
-      ?musicbrainzid:string ->
-      ?trackauth:string ->
-      artist:string ->
-      track:string ->
-      unit ->
-      song
+  val get_song :
+    ?time:float ->
+    ?source:source ->
+    ?rating:rating ->
+    ?length:float ->
+    ?album:string ->
+    ?tracknumber:int ->
+    ?musicbrainzid:string ->
+    ?trackauth:string ->
+    artist:string ->
+    track:string ->
+    unit ->
+    song
 
-    (** Check wether required song informations
+  (** Check wether required song informations
         are supplied for given action.
 
         Raises [Error (BadData reason)] if invalid data is given.
@@ -112,12 +132,12 @@ sig
 
           {{:http://www.audioscrobbler.net/development/protocol/}http://www.audioscrobbler.net/development/protocol/}
      *)
-    val check_song : song -> action -> unit
-  
+  val check_song : song -> action -> unit
+
   (** {2 Basic API} 
      
      Using this API, all requests are done in one single step *)
-  
+
   (** [do_np client login song]
      execute a nowplaying request 
      with authentification 
@@ -125,7 +145,8 @@ sig
      Optional host parameter is a pair
      "host",port to override the global
      values.*)
-  val do_np : ?timeout:float -> ?host:(string*int) -> client -> login -> song -> unit
+  val do_np :
+    ?timeout:float -> ?host:string * int -> client -> login -> song -> unit
 
   (** [do_submit client login songs]
       execute a nowplaying request 
@@ -135,7 +156,13 @@ sig
      songs for which supplied informations
      were incomplete, with corresponding exception 
      (see [check_song] source) *)
-  val do_submit : ?timeout:float -> ?host:(string*int) -> client -> login -> song list -> (error * song) list
+  val do_submit :
+    ?timeout:float ->
+    ?host:string * int ->
+    client ->
+    login ->
+    song list ->
+    (error * song) list
 
   (** {2 Advanced API} 
      
@@ -161,7 +188,8 @@ sig
      Optional host parameter is a pair 
      "host",port to override the global
      values. *)
-  val handshake : ?timeout:float -> ?host:(string*int) -> client -> login -> string
+  val handshake :
+    ?timeout:float -> ?host:string * int -> client -> login -> string
 
   (** [np sessionID track]
      execute a nowplaying request *)
@@ -175,16 +203,13 @@ sig
      were incomplete, with corresponding exception 
     (see check_song) *)
   val submit : ?timeout:float -> string -> song list -> (error * song) list
-
 end
 
 (** This is the type of the Radio API. *)
-module type Radio_t = 
-sig
+module type Radio_t = sig
+  (** API for using lastfm radios 
 
-(** API for using lastfm radios 
-
-    No protocol documentation avaible for now... *) 
+    No protocol documentation avaible for now... *)
 
   (** {2 Types} *)
 
@@ -192,19 +217,25 @@ sig
    
     A track is a list of "field","value" metadatas and an uri *)
   type track = (string * string) list * string
-  
+
   (** Various errors *)
-  type error = Http of string | Auth of string | Adjust of string*string | Playlist | Empty
+  type error =
+    | Http of string
+    | Auth of string
+    | Adjust of string * string
+    | Playlist
+    | Empty
+
   exception Error of error
-  
+
   (** Get meaning of Error e *)
   val string_of_error : error -> string
 
   (** Base host. Default: "ext.last.fm" *)
-  val base_host : string ref 
+  val base_host : string ref
 
   (** {2 Basic API} *)
-  
+
   (** [get uri] performs whole process and
       outputs a list of metadatas,uri
       from given lastfm uri.
@@ -244,13 +275,13 @@ sig
   (** [parse uri] parse the given lastfm:// uri
     *
     * returns login,station,options *)
-  val parse : string -> login*string*(string option)
-  
+  val parse : string -> login * string * string option
+
   (** [init login] initiate lastfm session
     *
     * Returns the session id *)
   val init : ?timeout:float -> login -> string
-  
+
   (** [adjust id station] adjusts lastfm station 
     * for given session ID 
     *
@@ -258,7 +289,7 @@ sig
     * by the server. Contains settings for adjusted
     * radio.
     *)
-  val adjust : ?timeout:float -> string -> string -> (string*string) list
+  val adjust : ?timeout:float -> string -> string -> (string * string) list
 
   (** [playlist id] returns the raw xml content of the playlist *)
   val playlist : ?timeout:float -> string -> string option -> string
@@ -266,11 +297,10 @@ sig
   (** [tracks id] 
     * returns a list of metadatas,uri  *)
   val tracks : ?timeout:float -> string -> string option -> track list
-  
+
   (** [clear id] closes and clear all 
     * informations about the given session ID *)
   val clear : string -> unit
-
 end
 
 (** Generic implementation of Audioscrobbler, independent 
@@ -280,4 +310,3 @@ module Audioscrobbler_generic (Http : Http_t) : Audioscrobbler_t
 (** Generic implementation of the Radio API, independant
   * from the Http request. *)
 module Radio_generic (Http : Http_t) : Radio_t
-

@@ -20,7 +20,15 @@
 
  *****************************************************************************)
 
-(* lastfm protocol API for ocaml *)
+(** API to various lastfm protocols (ocamlnet implementation). *)
 
-let version = "@VERSION@"
+(** Implementation of the Http request using ocamlnet. *)
+module Http_ocamlnet : Lastfm_generic.Http_t
 
+(** Implementation of Audioscrobbler using the ocamlnet
+  * Http request. *)
+module Audioscrobbler : Lastfm_generic.Audioscrobbler_t
+
+(** Implementation of the Radio API using the ocamlnet
+  * Http request. *)
+module Radio : Lastfm_generic.Radio_t

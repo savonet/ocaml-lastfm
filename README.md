@@ -1,27 +1,29 @@
 ocaml-lastfm
 
 
-This package contains an O'Caml interface for Lastfm API interface. 
+This package contains an OCaml interface for Lastfm API interface. 
 
 Please read the COPYING file before using this software.
 
 Prerequisites:
 ==============
 
-- ocaml >= 3.0.6 (haven't tried earlier versions)
+- ocaml
 
-- ocamlnet >= 2.2.8 (haven't tried earlier versions)
+- ocamlnet >= 2.2.8 (optional)
 
 - ocaml-xmlplaylist >= 0.1.0
 
-- ocaml-pcre >= 5.12.2 (haven't tried earlier versions)
+- ocaml-pcre >= 5.12.2
 
-- findlib >= 0.8.1 (haven't tried earlier versions)
+- dune >= 2.0
 
 Compilation:
 ============
 
-	$ make all
+```sh
+dune build
+```
 
 This should build both the native and the byte-code version of the
 extension library.
@@ -29,7 +31,15 @@ extension library.
 Installation:
 =============
 
-	$ make install
+Using [opam](http://opam.ocaml.org/):
+```sh
+opam install lastfm
+```
+
+Using `dune` and a local copy (dev only):
+```sh
+dune install
+```
 
 This should install the library file (using ocamlfind) in the
 appropriate place.

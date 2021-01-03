@@ -1,6 +1,0 @@
-name="lastfm"
-version="@VERSION@"
-description="OCaml bindings for lastfm"
-requires="@requires@"
-archive(byte)="lastfm.cma"
-archive(native)="lastfm.cmxa"

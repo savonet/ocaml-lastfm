@@ -18,28 +18,23 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *)
 
-open Lastfm
 open Lastfm.Audioscrobbler
 
 let _ =
   try
-    let user,pass,title,artist,length = Sys.argv.(1),Sys.argv.(2),Sys.argv.(3),Sys.argv.(4),Sys.argv.(5) in
+    let user, pass, title, artist, length =
+      (Sys.argv.(1), Sys.argv.(2), Sys.argv.(3), Sys.argv.(4), Sys.argv.(5))
+    in
     let time = Unix.time () in
     let length = float_of_string length in
-    let song = get_song ~time:time ~source:User
-                        ~length:length ~artist:artist
-			~track:title ()
-    in
-    let client = { client = "tst" ; version = "0.1" } in
-    let login = { user = user ; password = pass } in
-    do_np client login song ; 
+    let song = get_song ~time ~source:User ~length ~artist ~track:title () in
+    let client = { Lastfm_generic.client = "tst"; version = "0.1" } in
+    let login = { Lastfm_generic.user; password = pass } in
+    do_np client login song;
     let failed = do_submit client login [song] in
-    let print_failed (e,s) = 
-      Printf.printf "%s -- %s submission failed: %s"
-                    s.artist s.track 
-		    (string_of_error e)
+    let print_failed (e, s) =
+      Printf.printf "%s -- %s submission failed: %s" s.artist s.track
+        (string_of_error e)
     in
-    List.iter print_failed failed 
-  with
-    | Error(e) -> Printf.printf "Failed: %s\n"
-                       (string_of_error e)
+    List.iter print_failed failed
+  with Error e -> Printf.printf "Failed: %s\n" (string_of_error e)
