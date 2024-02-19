@@ -10,7 +10,7 @@ homepage: "https://github.com/savonet/ocaml-lastfm"
 bug-reports: "https://github.com/savonet/ocaml-lastfm/issues"
 depends: [
   "xmlplaylist"
-  "pcre"
+  "re"
   "dune" {>= "2.0"}
 ]
 depopts: ["ocamlnet"]

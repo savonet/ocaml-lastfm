@@ -1,7 +1,7 @@
 ocaml-lastfm
 
 
-This package contains an OCaml interface for Lastfm API interface. 
+This package contains an OCaml interface for Lastfm API interface.
 
 Please read the COPYING file before using this software.
 
@@ -14,7 +14,7 @@ Prerequisites:
 
 - ocaml-xmlplaylist >= 0.1.0
 
-- ocaml-pcre >= 5.12.2
+- ocaml-re
 
 - dune >= 2.0
 
