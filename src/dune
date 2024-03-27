@@ -12,7 +12,7 @@
    (-> lastfm.noop.ml)))
  (modules lastfm_constants lastfm_generic lastfm)
  (synopsis
-   "Implementation of the API used by the last.fm to keep count of played songs"))
+  "Implementation of the API used by the last.fm to keep count of played songs"))
 
 (rule
  (target lastfm_constants.ml)

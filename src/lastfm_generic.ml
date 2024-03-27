@@ -91,8 +91,7 @@ let of_hex1 c =
 
 let url_decode ?(plus = true) s =
   Pcre.substitute
-    ~rex:(Pcre.regexp
-      "\\+|%..")
+    ~rex:(Pcre.regexp "\\+|%..")
       (* TODO why do we match %. and % and seem to exclude them below ? *)
     ~subst:(fun s ->
       if s = "+" then if plus then " " else "+"
@@ -134,12 +133,13 @@ let to_hex2 =
     Bytes.to_string s
 
 let url_encode ?(plus = true) s =
-  Pcre.substitute ~rex:(Pcre.regexp "[^A-Za-z0-9_.!*-]")
+  Pcre.substitute
+    ~rex:(Pcre.regexp "[^A-Za-z0-9_.!*-]")
     ~subst:(fun x ->
       if plus && x = " " then "+"
       else (
         let k = Char.code x.[0] in
-        "%" ^ to_hex2 k ))
+        "%" ^ to_hex2 k))
     s
 
 module type Http_t = sig
@@ -380,7 +380,7 @@ module Audioscrobbler_generic (Http : Http_t) = struct
             Hashtbl.replace sessions (user, pass, (host, port)) id;
             Hashtbl.replace urls id v;
             id
-        | e -> raise e )
+        | e -> raise e)
 
   let check_song s a =
     match s.source with
@@ -412,7 +412,7 @@ module Audioscrobbler_generic (Http : Http_t) = struct
                                     (BadData
                                        "bad rating value (ban and skip are for \
                                         lastfm sources only)")
-                              | _ -> () ) ) ) )
+                              | _ -> ()))))
 
   let audioscrobbler_post ?timeout id base_url values =
     let host, port, req = parse_url base_url in
@@ -753,7 +753,7 @@ module Radio_generic (Http : Http_t) = struct
                 base_url;
                 base_path;
               };
-            args )
+            args)
           else begin
             clear id;
             raise (Adjust (req, ret))

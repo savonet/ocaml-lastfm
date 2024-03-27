@@ -52,12 +52,12 @@ module Http_ocamlnet = struct
     http_headers#set_fields headers;
     begin
       match request with
-      | Get -> ()
-      | Post post ->
-          body#set_value post;
-          call#set_request_body body;
-          http_headers#update_field "Content-length"
-            (string_of_int (String.length post))
+        | Get -> ()
+        | Post post ->
+            body#set_value post;
+            call#set_request_body body;
+            http_headers#update_field "Content-length"
+              (string_of_int (String.length post))
     end;
     call#set_request_header http_headers;
     pipeline#add call;

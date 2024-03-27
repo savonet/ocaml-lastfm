@@ -305,8 +305,8 @@ end
 
 (** Generic implementation of Audioscrobbler, independent 
   * from the Http request. *)
-module Audioscrobbler_generic (Http : Http_t) : Audioscrobbler_t
+module Audioscrobbler_generic (_ : Http_t) : Audioscrobbler_t
 
 (** Generic implementation of the Radio API, independant
   * from the Http request. *)
-module Radio_generic (Http : Http_t) : Radio_t
+module Radio_generic (_ : Http_t) : Radio_t
