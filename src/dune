@@ -3,7 +3,7 @@
  (public_name lastfm)
  (wrapped false)
  (libraries
-  pcre
+  re
   xmlplaylist
   (select
    lastfm.ml

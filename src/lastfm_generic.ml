@@ -22,6 +22,8 @@
 
 (* lastfm protocol API for ocaml *)
 
+module Pcre = Re.Pcre
+
 (* Records for client *)
 type client = { client : string; version : string }
 type login = { user : string; password : string }
@@ -89,8 +91,8 @@ let of_hex1 c =
 
 let url_decode ?(plus = true) s =
   Pcre.substitute
-    ~pat:
-      "\\+|%.."
+    ~rex:(Pcre.regexp
+      "\\+|%..")
       (* TODO why do we match %. and % and seem to exclude them below ? *)
     ~subst:(fun s ->
       if s = "+" then if plus then " " else "+"
@@ -132,7 +134,7 @@ let to_hex2 =
     Bytes.to_string s
 
 let url_encode ?(plus = true) s =
-  Pcre.substitute ~pat:"[^A-Za-z0-9_.!*-]"
+  Pcre.substitute ~rex:(Pcre.regexp "[^A-Za-z0-9_.!*-]")
     ~subst:(fun x ->
       if plus && x = " " then "+"
       else (
@@ -293,7 +295,7 @@ module Audioscrobbler_generic (Http : Http_t) = struct
       in
       let test (p, e) =
         try
-          ignore (Pcre.exec ~pat:p s);
+          ignore (Pcre.exec ~rex:(Pcre.regexp p) s);
           raise (Error e)
         with Not_found -> ()
       in
@@ -367,7 +369,7 @@ module Audioscrobbler_generic (Http : Http_t) = struct
       let ans = request ?timeout ~host ~port req in
       let state, id, v =
         try
-          let lines = Pcre.split ~pat:"[\r\n]+" ans in
+          let lines = Pcre.split ~rex:(Pcre.regexp "[\r\n]+") ans in
           match lines with
             | [state; id; a; b] -> (state, id, (a, b))
             | _ -> raise (error_of_response ans)
@@ -668,7 +670,7 @@ module Radio_generic (Http : Http_t) = struct
     let values = Pcre.split ~rex s in
     let split s l =
       try
-        let sub = Pcre.exec ~pat:"([^=]*)=(.*)" s in
+        let sub = Pcre.exec ~rex:(Pcre.regexp "([^=]*)=(.*)") s in
         (Pcre.get_substring sub 1, Pcre.get_substring sub 2) :: l
       with Not_found -> l
     in
@@ -683,7 +685,7 @@ module Radio_generic (Http : Http_t) = struct
     with Not_found -> raise (Auth s)
 
   let adjust_pat = "response=OK"
-  let check_adjust s = Pcre.pmatch ~pat:adjust_pat s
+  let check_adjust s = Pcre.pmatch ~rex:(Pcre.regexp adjust_pat) s
   let opt_split_rex = Pcre.regexp "^([^?]+)\\?(.+)$"
 
   let opt_parse s =

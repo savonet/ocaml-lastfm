@@ -1,5 +1,5 @@
-(lang dune 2.0)
-(version 0.3.3)
+(lang dune 3.14)
+(version 0.3.4)
 (name lastfm)
 (source (github savonet/ocaml-lastfm))
 (license LGPL-2.1)
@@ -13,7 +13,7 @@
  (synopsis "The lastfm library is an implementation of the API used by the last.fm to keep count of played songs")
  (depends
   xmlplaylist
-  pcre
+  re
   (dune (>= 2.0)))
  (depopts
   ocamlnet))
