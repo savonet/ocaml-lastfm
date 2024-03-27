@@ -2,7 +2,7 @@
 (version 0.3.4)
 (name lastfm)
 (source (github savonet/ocaml-lastfm))
-(license LGPL-2.1)
+(license LGPL-2.1-or-later)
 (authors "Romain Beauxis <toots@rastageeks.org>")
 (maintainers "The Savonet Team <savonet-users@lists.sourceforge.net>")
 
@@ -13,7 +13,7 @@
  (synopsis "The lastfm library is an implementation of the API used by the last.fm to keep count of played songs")
  (depends
   xmlplaylist
-  re
+  (re (>= 1.11.0))
   (dune (>= 2.0)))
  (depopts
   ocamlnet))
