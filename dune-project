@@ -13,7 +13,6 @@
  (synopsis "The lastfm library is an implementation of the API used by the last.fm to keep count of played songs")
  (depends
   xmlplaylist
-  (re (>= 1.11.0))
-  (dune (>= 2.0)))
+  (re (>= 1.11.0)))
  (depopts
   ocamlnet))
