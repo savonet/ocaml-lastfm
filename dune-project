@@ -1,4 +1,4 @@
-(lang dune 3.14)
+(lang dune 3.6)
 (version 0.3.4)
 (name lastfm)
 (source (github savonet/ocaml-lastfm))
@@ -12,6 +12,7 @@
  (name lastfm)
  (synopsis "The lastfm library is an implementation of the API used by the last.fm to keep count of played songs")
  (depends
+  (ocaml (>= 4.08))
   xmlplaylist
   (re (>= 1.11.0)))
  (depopts

@@ -9,7 +9,8 @@ license: "LGPL-2.1-or-later"
 homepage: "https://github.com/savonet/ocaml-lastfm"
 bug-reports: "https://github.com/savonet/ocaml-lastfm/issues"
 depends: [
-  "dune" {>= "3.14"}
+  "dune" {>= "3.6"}
+  "ocaml" {>= "4.08"}
   "xmlplaylist"
   "re" {>= "1.11.0"}
   "odoc" {with-doc}
